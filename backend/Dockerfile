@@ -1,24 +1,18 @@
-# Use official Node.js 20 image
-FROM node:20-alpine
+FROM node:20-slim
 
-# Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm install --production
 
-# Copy application code
+# Copy app files
 COPY . .
 
-# Expose port (Railway will override this)
+# Expose port
 EXPOSE 5000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-# Start application
-CMD ["npm", "start"]
+# Start app
+CMD ["node", "server.js"]
