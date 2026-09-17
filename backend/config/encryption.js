@@ -1,6 +1,19 @@
 const crypto = require('crypto');
 
 const ALGORITHM = 'aes-256-gcm';
+
+// ADD VALIDATION
+if (!process.env.ENCRYPTION_KEY) {
+  console.error('❌ ENCRYPTION_KEY environment variable is required!');
+  console.error('Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  process.exit(1);
+}
+
+if (process.env.ENCRYPTION_KEY.length !== 64) {
+  console.error('❌ ENCRYPTION_KEY must be 64 hex characters (32 bytes)');
+  process.exit(1);
+}
+
 const SECRET_KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
 
 class Encryption {
