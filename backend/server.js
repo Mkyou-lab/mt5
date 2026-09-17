@@ -5,6 +5,40 @@ const cors = require('cors');
 const helmet = require('helmet');
 const WebSocket = require('ws');
 const http = require('http');
+
+// ============================================
+// VALIDATE ENVIRONMENT VARIABLES
+// ============================================
+const requiredEnvVars = [
+  'MONGODB_URI',
+  'JWT_SECRET',
+  'ENCRYPTION_KEY'
+];
+
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+  console.error('❌ Missing required environment variables:');
+  missingVars.forEach(varName => {
+    console.error(`   - ${varName}`);
+  });
+  console.error('\nPlease set these in Railway Dashboard → Variables');
+  process.exit(1);
+}
+
+// Validate ENCRYPTION_KEY format
+if (process.env.ENCRYPTION_KEY.length !== 64) {
+  console.error('❌ ENCRYPTION_KEY must be 64 hex characters');
+  console.error('Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  process.exit(1);
+}
+
+console.log('✅ All environment variables validated');
+
+// ============================================
+// Continue with rest of server.js...
+// ============================================
+
 const logger = require('./utils/logger');
 
 // Routes
@@ -16,6 +50,8 @@ const dashboardRoutes = require('./routes/dashboard');
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
+
+const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(helmet());
@@ -31,10 +67,17 @@ mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-.then(() => logger.info('MongoDB connected'))
-.catch(err => logger.error('MongoDB connection error:', err));
+.then(() => {
+  console.log('✅ MongoDB connected successfully');
+  logger.info('MongoDB connected');
+})
+.catch(err => {
+  console.error('❌ MongoDB connection error:', err);
+  logger.error('MongoDB connection error:', err);
+  process.exit(1);
+});
 
-// WebSocket connections (for real-time updates)
+// WebSocket connections
 const clients = new Map();
 
 wss.on('connection', (ws, req) => {
@@ -77,7 +120,26 @@ app.use('/api/dashboard', dashboardRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    env: {
+      nodeEnv: process.env.NODE_ENV,
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      hasEncryptionKey: !!process.env.ENCRYPTION_KEY,
+      hasMongoDB: !!process.env.MONGODB_URI
+    }
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'MK PRO Backend API',
+    version: '1.0.0',
+    status: 'running'
+  });
 });
 
 // Error handler
@@ -89,7 +151,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+// Start server
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ MK PRO Backend running on port ${PORT}`);
+  console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`MK PRO Backend running on port ${PORT}`);
 });
