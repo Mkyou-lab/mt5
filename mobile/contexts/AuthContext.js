@@ -11,7 +11,8 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = 'http://YOUR_SERVER_IP:5000/api'; // Replace with your server IP
+  const API_URL = process.env.EXPO_PUBLIC_API_URL || 
+                'https://mk-pro-backend-production.up.railway.app/api'; // Replace with your server IP
 
   useEffect(() => {
     loadToken();
