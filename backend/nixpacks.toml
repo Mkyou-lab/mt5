@@ -1,11 +1,21 @@
+# Nixpacks configuration for Railway
+
 [phases.setup]
-nixPkgs = ['nodejs-18_x']
+nixPkgs = ['nodejs_20', 'npm-10_x']
+aptPkgs = []
 
 [phases.install]
-cmds = ['npm ci']
+dependsOn = ['setup']
+cmds = [
+    'npm ci --production=false'
+]
 
 [phases.build]
+dependsOn = ['install']
 cmds = []
 
 [start]
-cmd = 'node server.js'
+cmd = 'npm start'
+
+[variables]
+NODE_ENV = 'production'
